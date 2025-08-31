@@ -1,23 +1,43 @@
-const express = require('express')
-const cors = require('cors')
-const tasksRoutes = require('./routes/tasks.route')
-const connectDB = require('./config/db.config')
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
+require('dotenv').config();
+
+const tasksRoutes = require('./routes/tasks.route');
 
 const app = express();
 
-//check database connection
-connectDB();
+// Middlewarers
 
-// middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({extended:true}))
+app.use(express.urlencoded({ extended: true }));
 
-// routes
-app.use('/api',tasksRoutes);
+// Routes
+app.use('/api/tasks', tasksRoutes);
 
-app.get('/', (req, res) => {
-    res.send('Welcome to the Express API!')
-})
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        message: 'Task Manager API is running',
+        timestamp: new Date().toISOString()
+    });
+});
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({
+        message: 'Route not found'
+    });
+});
+
+// Error handler
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({
+        message: 'Something went wrong!',
+        error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+    });
+});
 
 module.exports = app;

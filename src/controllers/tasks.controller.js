@@ -6,13 +6,14 @@ exports.createTask = async (req, res) => {
         validateRequest(req.body, ['title', 'description'])
 
         const task = new Task({
-            title:req.body.title,
-            description: req.body.description
+            title: req.body.title,
+            description: req.body.description,
+            status: req.body.status || 'pending'
         })
 
         const new_task = await task.save();
 
-        res.status(200).json({
+        res.status(201).json({
             message: "Successfully created a new task",
             data: new_task
         })
@@ -27,10 +28,50 @@ exports.createTask = async (req, res) => {
 
 exports.getAllTasks = async (req, res) => {
     try{
-        const tasks = await Task.find()
+        const { search, status } = req.query;
+        let query = {};
+
+        // Search by keyword in title or description
+        if (search) {
+            query.$or = [
+                { title: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        // Filter by status
+        if (status && ['pending', 'in-progress', 'completed'].includes(status)) {
+            query.status = status;
+        }
+
+        const tasks = await Task.find(query).sort({ createdAt: -1 });
+        
         res.status(200).json({
             message: "Success",
-            data: tasks
+            data: tasks,
+            count: tasks.length
+        })
+    }catch(error){
+        console.log(error)
+       res.status(400).json({
+        message:error.message
+       }) 
+    }
+}
+
+exports.getTaskById = async (req, res) => {
+    try{
+        const task = await Task.findById(req.params.task_id)
+        
+        if (!task) {
+            return res.status(404).json({
+                message: "Task not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Success",
+            data: task
         })
     }catch(error){
         console.log(error)
@@ -42,17 +83,17 @@ exports.getAllTasks = async (req, res) => {
 
 exports.deleteTask = async (req, res) => {
     try{
-        // res.json(req.params.task_id) --> access params in request url\
+        
         const is_delete = await Task.findByIdAndDelete(req.params.task_id)
 
-        // other way to execute deletion
-        // const task = await Task.findById(req.params.task_id)
-        // task.deleteOne()
-
-        if(!is_delete) res.status(404).json({message: "No data found"})
+        if(!is_delete) {
+            return res.status(404).json({
+                message: "Task not found"
+            });
+        }
 
         res.status(200).json({
-            message: `${req.params.task_id} task has been deleted`,
+            message: "Task has been deleted successfully",
         })    
         
     }catch(error){
@@ -74,8 +115,14 @@ exports.updateTask = async (req, res) => {
             }
         )
 
+        if (!update) {
+            return res.status(404).json({
+                message: "Task not found"
+            });
+        }
+
         res.status(200).json({
-            message: `Task has been updated`,
+            message: "Task has been updated successfully",
             data: update
         })  
 
