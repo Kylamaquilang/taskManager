@@ -17,7 +17,7 @@ mongoose.connect(MONGODB_URI)
 
 // Start server
 app.listen(PORT, () => {
-    console.log('Task Manager API server is running on port ${PORT}');
-    console.log('Health check: http://localhost:${PORT}/health');
-    console.log('API Base URL: http://localhost:${PORT}/api/v1');
+    console.log(`Task Manager API server is running on port ${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/health`);
+    console.log(`API Base URL: http://localhost:${PORT}/api/tasks/v1`);
 });

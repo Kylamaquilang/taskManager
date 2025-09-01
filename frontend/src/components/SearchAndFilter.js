@@ -8,12 +8,17 @@ export default function SearchAndFilter({ onFiltersChange, isLoading = false }) 
   const [status, setStatus] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Combined debounced effect for both search and status
   useEffect(() => {
-    const filters = {};
-    if (search.trim()) filters.search = search.trim();
-    if (status) filters.status = status;
-    onFiltersChange(filters);
-  }, [search, status, onFiltersChange]);
+    const timeoutId = setTimeout(() => {
+      const filters = {};
+      if (search.trim()) filters.search = search.trim();
+      if (status) filters.status = status;
+      onFiltersChange(filters);
+    }, search ? 300 : 0); // 300ms delay for search, immediate for status
+
+    return () => clearTimeout(timeoutId);
+  }, [search, status]);
 
   const clearFilters = () => {
     setSearch('');
@@ -26,21 +31,26 @@ export default function SearchAndFilter({ onFiltersChange, isLoading = false }) 
     <div className="space-y-4">
       {/* Search Bar */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        <label htmlFor="search-input" className="sr-only">
+          Search tasks
+        </label>
+        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 w-5 h-5" />
         <input
+          id="search-input"
           type="text"
           placeholder="Search tasks by title or description..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="input pl-10 pr-4"
+          className="w-full px-12 py-4 text-lg border-2 border-gray-200 rounded-xl shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white hover:border-gray-300 placeholder-gray-400"
           disabled={isLoading}
         />
         {search && (
           <button
             onClick={() => setSearch('')}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Clear search"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         )}
       </div>
@@ -67,7 +77,7 @@ export default function SearchAndFilter({ onFiltersChange, isLoading = false }) 
 
       {/* Filter Options */}
       {showFilters && (
-        <div className="card p-4 space-y-3">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-lg p-4 space-y-3">
           <div>
             <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
               Status Filter

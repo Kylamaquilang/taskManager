@@ -6,7 +6,7 @@ import TaskForm from '@/components/TaskForm';
 import { taskApi } from '@/services/api';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, CheckCircle, Clock, Play, Plus } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 export default function Home() {
   const [tasks, setTasks] = useState([]);
@@ -16,13 +16,14 @@ export default function Home() {
   const [editingTask, setEditingTask] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [filters, setFilters] = useState({});
+  const fetchTasksRef = useRef();
 
   // Fetch tasks
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = useCallback(async (currentFilters = filters) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await taskApi.getTasks(filters);
+      const response = await taskApi.getTasks(currentFilters);
       setTasks(response.data);
     } catch (err) {
       setError('Failed to fetch tasks. Please try again.');
@@ -30,11 +31,22 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, []);
+
+  // Store fetchTasks in ref to prevent dependency issues
+  fetchTasksRef.current = fetchTasks;
 
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+  }, []);
+
+  // Handle filters change
+  const handleFiltersChange = useCallback((newFilters) => {
+    setFilters(newFilters);
+    if (fetchTasksRef.current) {
+      fetchTasksRef.current(newFilters);
+    }
+  }, []);
 
   // Create task
   const handleCreateTask = async (taskData) => {
@@ -42,7 +54,9 @@ export default function Home() {
       setFormLoading(true);
       await taskApi.createTask(taskData);
       setIsFormOpen(false);
-      fetchTasks();
+      if (fetchTasksRef.current) {
+        fetchTasksRef.current();
+      }
     } catch (err) {
       setError('Failed to create task. Please try again.');
       console.error('Error creating task:', err);
@@ -59,7 +73,9 @@ export default function Home() {
       setFormLoading(true);
       await taskApi.updateTask(editingTask._id, taskData);
       setEditingTask(null);
-      fetchTasks();
+      if (fetchTasksRef.current) {
+        fetchTasksRef.current();
+      }
     } catch (err) {
       setError('Failed to update task. Please try again.');
       console.error('Error updating task:', err);
@@ -74,7 +90,9 @@ export default function Home() {
     
     try {
       await taskApi.deleteTask(taskId);
-      fetchTasks();
+      if (fetchTasksRef.current) {
+        fetchTasksRef.current();
+      }
     } catch (err) {
       setError('Failed to delete task. Please try again.');
       console.error('Error deleting task:', err);
@@ -85,9 +103,12 @@ export default function Home() {
   const handleStatusChange = async (taskId, status) => {
     try {
       await taskApi.updateTaskStatus(taskId, status);
-      fetchTasks();
+      if (fetchTasksRef.current) {
+        fetchTasksRef.current();
+      }
     } catch (err) {
-      setError('Failed to update task status. Please try again.');
+      const errorMessage = err.response?.data?.message || 'Failed to update task status. Please try again.';
+      setError(errorMessage);
       console.error('Error updating task status:', err);
     }
   };
@@ -120,7 +141,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen py-8 px-4">
+    <div className="min-h-screen py-8 px-4 bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -133,7 +154,7 @@ export default function Home() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="card p-4 flex items-center space-x-3"
+            className="bg-white rounded-xl border border-gray-200 shadow-lg p-4 flex items-center space-x-3 hover:shadow-xl transition-all duration-300"
           >
             <div className="p-2 bg-yellow-100 rounded-full">
               <Clock className="w-5 h-5 text-yellow-600" />
@@ -148,7 +169,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="card p-4 flex items-center space-x-3"
+            className="bg-white rounded-xl border border-gray-200 shadow-lg p-4 flex items-center space-x-3 hover:shadow-xl transition-all duration-300"
           >
             <div className="p-2 bg-blue-100 rounded-full">
               <Play className="w-5 h-5 text-blue-600" />
@@ -163,7 +184,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="card p-4 flex items-center space-x-3"
+            className="bg-white rounded-xl border border-gray-200 shadow-lg p-4 flex items-center space-x-3 hover:shadow-xl transition-all duration-300"
           >
             <div className="p-2 bg-green-100 rounded-full">
               <CheckCircle className="w-5 h-5 text-green-600" />
@@ -177,14 +198,14 @@ export default function Home() {
 
         {/* Search and Filter */}
         <div className="mb-6">
-          <SearchAndFilter onFiltersChange={setFilters} isLoading={loading} />
+          <SearchAndFilter onFiltersChange={handleFiltersChange} isLoading={loading} />
         </div>
 
         {/* Add Task Button */}
         <div className="mb-6">
           <button
             onClick={() => setIsFormOpen(true)}
-            className="btn btn-primary flex items-center space-x-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium flex items-center space-x-2 shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
           >
             <Plus className="w-5 h-5" />
             <span>Add New Task</span>
@@ -198,7 +219,7 @@ export default function Home() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2"
+              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-2 shadow-sm"
             >
               <AlertCircle className="w-5 h-5 text-red-600" />
               <span className="text-red-800">{error}</span>
@@ -243,7 +264,7 @@ export default function Home() {
                 {Object.keys(filters).length === 0 && (
                   <button
                     onClick={() => setIsFormOpen(true)}
-                    className="btn btn-primary"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                   >
                     Create Your First Task
                   </button>

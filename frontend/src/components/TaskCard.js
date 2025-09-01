@@ -41,7 +41,7 @@ export default function TaskCard({ task, onEdit, onDelete, onStatusChange }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="card p-6 hover:shadow-xl transition-shadow duration-300"
+      className="bg-white rounded-xl border border-gray-200 shadow-lg hover:shadow-2xl transition-all duration-300 p-6 hover:scale-[1.02]"
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-2">

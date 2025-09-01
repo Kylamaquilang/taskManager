@@ -133,3 +133,42 @@ exports.updateTask = async (req, res) => {
         }) 
     }
 }
+
+exports.updateTaskStatus = async (req, res) => {
+    try{
+        const { status } = req.body;
+        
+        // Validate status
+        if (!status || !['pending', 'in-progress', 'completed'].includes(status)) {
+            return res.status(400).json({
+                message: "Invalid status. Must be 'pending', 'in-progress', or 'completed'"
+            });
+        }
+
+        const update = await Task.findByIdAndUpdate(
+            req.params.task_id,
+            { status },
+            {
+                new: true,
+                runValidators: true
+            }
+        )
+
+        if (!update) {
+            return res.status(404).json({
+                message: "Task not found"
+            });
+        }
+
+        res.status(200).json({
+            message: "Task status has been updated successfully",
+            data: update
+        })  
+
+    }catch(error){
+        console.log(error)
+        res.status(400).json({
+         message:error.message
+        }) 
+    }
+}
